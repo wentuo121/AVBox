@@ -1,4 +1,4 @@
-// 清爽薄荷：PeekMorph 展开式控制面板 + TabBar 风格渐变指示条 + Hero 彩色渐变装饰 + 海报底部渐变分割线。
+// 清爽薄荷：TabBar 风格渐变指示条 + 极简 SectionBar + 海报底部渐变分割线。
 import core.widgets;
 import peek.home;
 
@@ -11,7 +11,7 @@ widget skins {
   glow: { name: "流光", dynamic: true },
 } = SizedBoxShrink();
 
-// ================================================================= Hero 轮播
+// ================================================================= Hero
 
 widget HeroArt = T4Image(
   url: switch args.item.backdrop { "": args.item.pic, default: args.item.backdrop },
@@ -22,7 +22,6 @@ widget HeroArt = T4Image(
   drift: true,
 );
 
-// 顶部浅暗压状态栏 + 底部半透明白接页面
 widget HeroShade = Container(
   decoration: {
     type: "box",
@@ -34,23 +33,6 @@ widget HeroShade = Container(
       stops: [ 0.0, 0.3, 0.65, 1.0 ],
     },
   },
-);
-
-// 左下一条彩色渐变装饰（小细节，让 Hero 不单调）
-widget HeroAccentBar = Align(
-  alignment: { x: -0.85, y: 0.85 },
-  child: Container(
-    width: 48.0, height: 4.0,
-    decoration: {
-      type: "box",
-      gradient: {
-        type: "linear",
-        begin: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 0.0 },
-        colors: [ data.home.skin.accent, 0x00000000 ],
-      },
-      borderRadius: [ { x: 2.0 } ],
-    },
-  ),
 );
 
 widget HeroTitle = switch args.item.titleLogo {
@@ -68,6 +50,12 @@ widget HeroTitle = switch args.item.titleLogo {
   ),
 };
 
+widget HeroInfoText = Text(
+  text: args.text,
+  maxLines: 1, overflow: "ellipsis",
+  style: { color: 0xBFFFFFFF, fontSize: 11.0, fontWeight: "w600", letterSpacing: 0.4 },
+);
+
 widget HeroMeta = Align(
   alignment: { x: 0.0, y: 1.0 },
   child: Padding(
@@ -78,10 +66,23 @@ widget HeroMeta = Align(
         HeroTitle(item: args.item, align: "center", size: 26.0, height: 60.0, maxWidth: 280.0, alignment: "bottomCenter", box: { x: 0.0, y: 1.0 }),
         Padding(
           padding: [ 0.0, 8.0, 0.0, 0.0 ],
-          child: Text(
-            text: [ args.item.year, "  ·  ", args.item.typeName, switch args.item.remarks { "": "", default: [ "  ·  ", args.item.remarks ] } ],
-            maxLines: 1, overflow: "ellipsis",
-            style: { color: 0xBFFFFFFF, fontSize: 11.0, fontWeight: "w600", letterSpacing: 0.4 },
+          child: Row(
+            mainAxisSize: "min", crossAxisAlignment: "center",
+            children: [
+              HeroInfoText(text: args.item.year),
+              Padding(padding: [ 6.0, 0.0 ], child: Text(text: "·", style: { color: 0x66FFFFFF, fontSize: 12.0 })),
+              HeroInfoText(text: args.item.typeName),
+              switch args.item.remarks {
+                "": SizedBoxShrink(),
+                default: Padding(
+                  padding: [ 6.0, 0.0 ],
+                  child: Row(mainAxisSize: "min", crossAxisAlignment: "center", children: [
+                    Padding(padding: [ 0.0, 0.0, 6.0, 0.0 ], child: Text(text: "·", style: { color: 0x66FFFFFF, fontSize: 12.0 })),
+                    HeroInfoText(text: args.item.remarks),
+                  ]),
+                ),
+              },
+            ],
           ),
         ),
       ],
@@ -97,20 +98,19 @@ widget HeroSlide = GestureDetector(
       borderRadius: [ { x: 20.0 } ],
       child: Stack(
         fit: "expand",
-        children: [ HeroArt(item: args.item), HeroShade(), HeroAccentBar(), HeroMeta(item: args.item) ],
+        children: [ HeroArt(item: args.item), HeroShade(), HeroMeta(item: args.item) ],
       ),
     ),
   ),
 );
 
-// ================================================================= 分类胶囊 + TabBar 渐变指示条
+// ================================================================= 分类胶囊：TabBar 风格 + 渐变指示条
 
 widget CategoryChip = GestureDetector(
   onTap: event "selectType" { typeId: args.item.typeId },
-  child: Container(
-    color: 0x00000000,
-    child: Column(
-      mainAxisSize: "min", children: [
+  child: Column(
+    mainAxisSize: "min", crossAxisAlignment: "center",
+    children: [
       Container(
         padding: [ 4.0, 0.0 ],
         child: Text(
@@ -124,8 +124,9 @@ widget CategoryChip = GestureDetector(
         ),
       ),
       Container(
-        height: 3.0, margin: [ 0.0, 6.0, 0.0, 0.0 ],
-        constraints: { maxWidth: switch args.item.selected { true: 48.0, false: 0.0 } },
+        width: switch args.item.selected { true: 48.0, false: 0.0 },
+        height: 3.0,
+        margin: [ 0.0, 6.0, 0.0, 0.0 ],
         decoration: switch args.item.selected {
           true: {
             type: "box",
@@ -156,7 +157,7 @@ widget CategoryHeader = Container(
   ),
 );
 
-// ================================================================= SectionBar（极简站源名 + 筛选）
+// ================================================================= SectionBar：极简站源名 + 筛选
 
 widget TinyIconBtn = GestureDetector(
   onTap: args.action,
@@ -175,25 +176,32 @@ widget TinyIconBtn = GestureDetector(
 widget SectionBar = Container(
   color: 0x00000000,
   padding: [ 16.0, 4.0, 16.0, 6.0 ],
-  child: Row(children: [
-    Expanded(child: Column(
-      mainAxisSize: "min", crossAxisAlignment: "start", children: [
-      Row(mainAxisSize: "min", children: [
-        Container(width: 3.0, height: 14.0, margin: [ 0.0, 0.0, 8.0, 0.0 ],
-          decoration: { type: "box", color: data.home.skin.accent, borderRadius: [ { x: 1.5 } ] }),
-        Text(text: data.home.source.name, maxLines: 1, overflow: "ellipsis",
-          style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w800" }),
-      ]),
-      Padding(padding: [ 11.0, 2.0, 0.0, 0.0 ],
-        child: Text(text: [ data.home.totalLabel, " 部内容" ],
-          maxLines: 1, overflow: "ellipsis",
-          style: { color: data.home.skin.ink2, fontSize: 10.0, letterSpacing: 0.3 })),
-    ])),
-    TinyIconBtn(icon: data.home.icons.filter, action: event "toggleFilters" {}),
-  ]),
+  child: Row(
+    children: [
+      Expanded(child: Column(
+        mainAxisSize: "min", crossAxisAlignment: "start",
+        children: [
+          Row(
+            mainAxisSize: "min",
+            children: [
+              Container(width: 3.0, height: 14.0, margin: [ 0.0, 0.0, 8.0, 0.0 ],
+                decoration: { type: "box", color: data.home.skin.accent, borderRadius: [ { x: 1.5 } ] }),
+              Text(text: data.home.source.name, maxLines: 1, overflow: "ellipsis",
+                style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w800" }),
+            ],
+          ),
+          Padding(padding: [ 11.0, 2.0, 0.0, 0.0 ],
+            child: Text(text: [ data.home.totalLabel, " 部内容" ],
+              maxLines: 1, overflow: "ellipsis",
+              style: { color: data.home.skin.ink2, fontSize: 10.0, letterSpacing: 0.3 })),
+        ],
+      )),
+      TinyIconBtn(icon: data.home.icons.filter, action: event "toggleFilters" {}),
+    ],
+  ),
 );
 
-// ================================================================= 海报卡片（底部渐变分割线）
+// ================================================================= 海报卡片：底部渐变分割线
 
 widget PosterCard = GestureDetector(
   onTap: event "openItem" { index: args.item.index },
@@ -205,30 +213,33 @@ widget PosterCard = GestureDetector(
       color: 0xFFFFFFFF,
       boxShadow: [ { color: 0x14000000, blurRadius: 12.0, offset: { x: 0.0, y: 4.0 } } ],
     },
-    child: Column(crossAxisAlignment: "start", children: [
-      Expanded(child: ClipRRect(
-        borderRadius: [ { x: 14.0 }, { x: 14.0, y: 0.0 } ],
-        child: T4Image(url: args.item.pic),
-      )),
-      Padding(padding: [ 10.0, 6.0, 10.0, 0.0 ], child: Text(
-        text: args.item.name, maxLines: 1, overflow: "ellipsis",
-        style: { color: data.home.skin.ink, fontSize: 12.0, fontWeight: "w700" },
-      )),
-      Padding(padding: [ 10.0, 0.0, 10.0, 10.0 ], child: Text(
-        text: args.item.remarks, maxLines: 1, overflow: "ellipsis",
-        style: { color: data.home.skin.ink2, fontSize: 10.0 },
-      )),
-      Container(height: 2.0, margin: [ 12.0, 0.0, 12.0, 10.0 ],
-        decoration: {
-          type: "box",
-          gradient: {
-            type: "linear",
-            begin: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 0.0 },
-            colors: [ data.home.skin.accent, 0x16000000, 0x00000000 ],
-          },
-          borderRadius: [ { x: 1.0 } ],
-        }),
-    ]),
+    child: Column(
+      crossAxisAlignment: "start",
+      children: [
+        Expanded(child: ClipRRect(
+          borderRadius: [ { x: 14.0 }, { x: 14.0, y: 0.0 } ],
+          child: T4Image(url: args.item.pic),
+        )),
+        Padding(padding: [ 10.0, 6.0, 10.0, 0.0 ], child: Text(
+          text: args.item.name, maxLines: 1, overflow: "ellipsis",
+          style: { color: data.home.skin.ink, fontSize: 12.0, fontWeight: "w700" },
+        )),
+        Padding(padding: [ 10.0, 0.0, 10.0, 6.0 ], child: Text(
+          text: args.item.remarks, maxLines: 1, overflow: "ellipsis",
+          style: { color: data.home.skin.ink2, fontSize: 10.0 },
+        )),
+        Container(height: 2.0, margin: [ 12.0, 0.0, 12.0, 10.0 ],
+          decoration: {
+            type: "box",
+            gradient: {
+              type: "linear",
+              begin: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 0.0 },
+              colors: [ data.home.skin.accent, 0x16000000, 0x00000000 ],
+            },
+            borderRadius: [ { x: 1.0 } ],
+          }),
+      ],
+    ),
   ),
 );
 
