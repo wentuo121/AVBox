@@ -1,4 +1,4 @@
-// 清新薄荷：薄荷绿主色调，层叠轮播 + 圆角海报网格 + 毛玻璃吸顶栏。
+// 清新薄荷：薄荷绿主色调 + 层叠轮播 + 圆角海报网格 + 二级筛选页。
 import core.widgets;
 import peek.home;
 
@@ -10,14 +10,19 @@ widget skins {
   glow:  { name: "流光", dynamic: true },
 } = SizedBoxShrink();
 
-// ---------------------------------------------------------------- 轮播卡片
+// ---------------------------------------------------------------- 轮播推荐卡
 
 widget HeroCard = GestureDetector(
   onTap: event "openRecommend" { index: args.index },
   child: Container(
-    padding: [ 4.0 ],
+    margin: [ 4.0, 4.0, 4.0, 4.0 ],
+    decoration: {
+      type: "box",
+      borderRadius: [ { x: 16.0 } ],
+    },
+    clipBehavior: "none",
     child: ClipRRect(
-      borderRadius: [ { x: 18.0 } ],
+      borderRadius: [ { x: 16.0 } ],
       child: Stack(
         fit: "expand",
         children: [
@@ -32,14 +37,14 @@ widget HeroCard = GestureDetector(
               gradient: {
                 type: "linear",
                 begin: { x: 0.0, y: 1.0 },
-                end: { x: 0.0, y: 0.5 },
+                end: { x: 0.0, y: 0.0 },
                 colors: [ 0xCC000000, 0x00000000 ],
               },
             },
           ),
           Positioned(
-            start: 16.0,
-            end: 16.0,
+            left: 16.0,
+            right: 16.0,
             bottom: 16.0,
             child: Column(
               mainAxisSize: "min",
@@ -51,9 +56,12 @@ widget HeroCard = GestureDetector(
                   overflow: "ellipsis",
                   style: { color: 0xFFFFFFFF, fontSize: 20.0, fontWeight: "w800" },
                 ),
-                Text(
-                  text: [ args.item.year, " · ", args.item.typeName ],
-                  style: { color: 0xB3FFFFFF, fontSize: 12.0 },
+                Padding(
+                  padding: [ 0.0, 4.0, 0.0, 0.0 ],
+                  child: Text(
+                    text: [ args.item.year, " · ", args.item.typeName ],
+                    style: { color: 0xCCFFFFFF, fontSize: 12.0 },
+                  ),
                 ),
               ],
             ),
@@ -64,81 +72,83 @@ widget HeroCard = GestureDetector(
   ),
 );
 
-// ---------------------------------------------------------------- 吸顶栏
+// ---------------------------------------------------------------- 分类胶囊
+
+widget Chip = GestureDetector(
+  onTap: event "selectType" { typeId: args.item.typeId },
+  child: Container(
+    margin: [ 0.0, 8.0, 8.0, 8.0 ],
+    padding: [ 14.0, 0.0 ],
+    alignment: { x: 0.0, y: 0.0 },
+    decoration: {
+      type: "box",
+      color: switch args.item.selected { true: data.home.skin.accent, false: 0x00000000 },
+      borderRadius: [ { x: 16.0 } ],
+    },
+    child: Text(
+      text: args.item.typeName,
+      style: {
+        color: switch args.item.selected { true: 0xFFFFFFFF, false: data.home.skin.ink },
+        fontSize: 14.0,
+        fontWeight: switch args.item.selected { true: "w700", false: "w400" },
+      },
+    ),
+  ),
+);
+
+// ---------------------------------------------------------------- 图标按钮
 
 widget ApiButton = GestureDetector(
   onTap: event "showApiConfigPicker" {},
   child: Container(
-    width: 40.0,
-    height: 40.0,
+    width: 44.0,
     alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: 0xF0616, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
+    child: Icon(icon: data.home.icons.api, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
   ),
 );
 
 widget SearchButton = GestureDetector(
   onTap: event "openSearch" {},
   child: Container(
-    width: 40.0,
-    height: 40.0,
+    width: 44.0,
     alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: 0xE567, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+    child: Icon(icon: data.home.icons.search, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
   ),
 );
 
-widget CategoryChip = GestureDetector(
-  onTap: event "selectType" { typeId: args.item.typeId },
-  child: Container(
-    padding: [ 14.0, 0.0 ],
-    margin: [ 0.0, 8.0, 8.0, 8.0 ],
-    alignment: { x: 0.0, y: 0.0 },
-    child: Text(
-      text: args.item.typeName,
-      style: {
-        color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
-        fontSize: 14.0,
-        fontWeight: switch args.item.selected { true: "w700", false: "w500" },
-      },
-    ),
-  ),
-);
+// ---------------------------------------------------------------- 吸顶栏
 
-widget PinnedBar = PeekGlass(
-  blur: 18.0,
-  radius: 0.0,
-  tintColor: 0xE6FFFFFF,
-  borderColor: 0x1A000000,
-  child: Container(
-    padding: [ 12.0, 0.0 ],
-    child: Column(
-      mainAxisSize: "min",
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                text: data.home.source.name,
-                maxLines: 1,
-                overflow: "ellipsis",
-                style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
-              ),
+widget PinnedHeader = Container(
+  color: data.home.skin.bg,
+  child: Column(
+    mainAxisSize: "min",
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              text: data.home.source.name,
+              maxLines: 1,
+              overflow: "ellipsis",
+              style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
             ),
-            SearchButton(),
-            ApiButton(),
+          ),
+          SearchButton(),
+          ApiButton(),
+        ],
+      ),
+      SizedBox(
+        height: 36.0,
+        child: ListView(
+          scrollDirection: "horizontal",
+          padding: [ 0.0, 0.0 ],
+          children: [
+            ...for item in data.home.classes:
+              Chip(item: item),
           ],
         ),
-        SizedBox(
-          height: 36.0,
-          child: ListView(
-            scrollDirection: "horizontal",
-            children: [
-              ...for item in data.home.classes:
-                CategoryChip(item: item),
-            ],
-          ),
-        ),
-      ],
-    ),
+      ),
+    ],
   ),
 );
 
@@ -155,7 +165,6 @@ widget Poster = GestureDetector(
           borderRadius: [ { x: 10.0 } ],
           child: T4Image(
             url: args.item.pic,
-            fit: "cover",
             placeholderColor: data.home.skin.card,
           ),
         ),
@@ -182,20 +191,13 @@ widget Poster = GestureDetector(
   ),
 );
 
-widget Empty = Center(
-  child: Text(
-    text: switch data.home.loading { true: "正在载入…", false: "暂无内容" },
-    style: { color: data.home.skin.ink2 },
-  ),
-);
-
 // ---------------------------------------------------------------- 首页根
 
 widget root = Container(
   color: data.home.skin.bg,
   duration: 600,
   child: PeekStickyGrid(
-    heroHeight: switch data.home.hasRecommend { true: 210.0, false: 0.0 },
+    heroHeight: switch data.home.hasRecommend { true: 220.0, false: 0.0 },
     hero: switch data.home.hasRecommend {
       true: Container(
         padding: [ 14.0, 10.0, 14.0, 0.0 ],
@@ -206,7 +208,6 @@ widget root = Container(
           interval: 4500,
           showIndicators: true,
           indicatorAlignment: "end",
-          indicatorBottom: 4.0,
           activeColor: data.home.skin.accent,
           inactiveColor: 0x4DFFFFFF,
           stackScale: 0.86,
@@ -221,15 +222,20 @@ widget root = Container(
       ),
       default: SizedBoxShrink(),
     },
-    pinnedHeight: 88.0,
-    pinnedHeader: PinnedBar(),
+    pinnedHeight: 92.0,
+    pinnedHeader: PinnedHeader(),
     sectionHeight: 0.0,
     sectionHeader: SizedBoxShrink(),
     onRefresh: event "refresh" {},
     refreshing: data.home.refreshing,
     refreshColor: data.home.skin.accent,
     refreshBackground: data.home.skin.bg,
-    empty: Empty(),
+    empty: Center(
+      child: Text(
+        text: switch data.home.loading { true: "正在载入…", false: "暂无内容" },
+        style: { color: data.home.skin.ink2 },
+      ),
+    ),
     crossAxisCount: data.home.gridColumns,
     childAspectRatio: 0.62,
     mainAxisSpacing: 14.0,
@@ -248,36 +254,32 @@ widget root = Container(
 widget PageTab = GestureDetector(
   onTap: event "selectType" { typeId: args.item.typeId },
   child: Container(
-    padding: [ 14.0, 0.0 ],
+    color: 0x00000000,
     margin: [ 0.0, 6.0, 6.0, 6.0 ],
+    padding: [ 12.0, 0.0 ],
     alignment: { x: 0.0, y: 0.0 },
     child: Text(
       text: args.item.typeName,
       style: {
         color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
         fontSize: 14.0,
-        fontWeight: switch args.item.selected { true: "w700", false: "w500" },
+        fontWeight: switch args.item.selected { true: "w700", false: "w400" },
       },
     ),
   ),
 );
 
-widget PageFilter = GestureDetector(
+widget PageOption = GestureDetector(
   onTap: event "selectFilter" { key: args.item.filterKey, value: args.item.value },
   child: Container(
-    padding: [ 10.0, 0.0 ],
+    color: 0x00000000,
     margin: [ 0.0, 4.0, 6.0, 4.0 ],
+    padding: [ 10.0, 0.0 ],
     alignment: { x: 0.0, y: 0.0 },
-    decoration: {
-      type: "box",
-      color: switch args.item.selected { true: data.home.skin.accentSoft, false: 0x00000000 },
-      borderRadius: [ { x: 12.0 } ],
-      border: [ { color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.hair }, width: 1.0 } ],
-    },
     child: Text(
       text: args.item.name,
       style: {
-        color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
+        color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink },
         fontSize: 13.0,
       },
     ),
@@ -286,13 +288,12 @@ widget PageFilter = GestureDetector(
 
 widget PageFilters = Column(
   mainAxisSize: "min",
-  crossAxisAlignment: "start",
   children: [
     SizedBox(
       height: 42.0,
       child: ListView(
         scrollDirection: "horizontal",
-        padding: [ 14.0, 0.0 ],
+        padding: [ 8.0, 0.0 ],
         children: [
           ...for item in data.home.classes:
             PageTab(item: item),
@@ -300,24 +301,14 @@ widget PageFilters = Column(
       ),
     ),
     ...for group in data.home.filters:
-      Padding(
-        padding: [ 14.0, 0.0 ],
-        child: Column(
-          mainAxisSize: "min",
-          crossAxisAlignment: "start",
+      SizedBox(
+        height: 38.0,
+        child: ListView(
+          scrollDirection: "horizontal",
+          padding: [ 8.0, 0.0 ],
           children: [
-            Padding(
-              padding: [ 0.0, 4.0, 0.0, 2.0 ],
-              child: Text(text: group.name, style: { color: data.home.skin.ink2, fontSize: 12.0 }),
-            ),
-            Wrap(
-              spacing: 4.0,
-              runSpacing: 2.0,
-              children: [
-                ...for option in group.options:
-                  PageFilter(item: option),
-              ],
-            ),
+            ...for option in group.options:
+              PageOption(item: option),
           ],
         ),
       ),
@@ -343,7 +334,12 @@ widget categoryPage = Container(
         refreshing: data.home.refreshing,
         refreshColor: data.home.skin.accent,
         refreshBackground: data.home.skin.bg,
-        empty: Empty(),
+        empty: Center(
+          child: Text(
+            text: switch data.home.loading { true: "正在载入…", false: "暂无内容" },
+            style: { color: data.home.skin.ink2 },
+          ),
+        ),
         crossAxisCount: data.home.metrics.gridColumns,
         childAspectRatio: data.home.metrics.gridRatio,
         mainAxisSpacing: 16.0,
@@ -372,7 +368,7 @@ widget categoryPage = Container(
                       width: 48.0,
                       height: 48.0,
                       alignment: { x: 0.0, y: 0.0 },
-                      child: Icon(icon: 0xE094, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+                      child: Icon(icon: data.home.icons.backIos, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
                     ),
                   ),
                   Expanded(
