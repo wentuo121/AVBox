@@ -46,8 +46,8 @@ widget RecommendCard = GestureDetector(
             },
           ),
           Positioned(
-            left: 20.0,
-            right: 20.0,
+            start: 20.0,
+            end: 20.0,
             bottom: 20.0,
             child: Column(
               mainAxisSize: "min",
@@ -132,27 +132,6 @@ widget Hero = Container(
 
 // ---------------------------------------------------------------- 吸顶栏组件
 
-widget SkinChip = GestureDetector(
-  onTap: event "selectSkin" { id: args.skin.id },
-  child: Container(
-    padding: [ 10.0, 4.0 ],
-    margin: [ 0.0, 0.0, 6.0, 0.0 ],
-    decoration: {
-      type: "box",
-      color: switch args.skin.selected { true: data.home.skin.accent, false: 0x00000000 },
-      borderRadius: [ { x: 14.0 } ],
-      border: [ { color: switch args.skin.selected { true: 0x00000000, false: data.home.skin.hair }, width: 1.0 } ],
-    },
-    child: Text(
-      text: args.skin.name,
-      style: {
-        color: switch args.skin.selected { true: data.home.skin.chipOnText, false: data.home.skin.ink2 },
-        fontSize: 12.0,
-      },
-    ),
-  ),
-);
-
 widget ApiBtn = GestureDetector(
   onTap: event "showApiConfigPicker" {},
   child: Container(
@@ -175,16 +154,6 @@ widget SearchBtn = GestureDetector(
     height: 38.0,
     alignment: { x: 0.0, y: 0.0 },
     child: Icon(icon: data.home.icons.search, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
-  ),
-);
-
-widget LayoutBtn = GestureDetector(
-  onTap: event "cycleDisplayStyle" {},
-  child: Container(
-    width: 38.0,
-    height: 38.0,
-    alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: data.home.icons.layout, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
   ),
 );
 
