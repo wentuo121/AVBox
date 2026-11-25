@@ -1,36 +1,28 @@
-// 清新薄荷：薄荷绿主色调、层叠轮播、圆角网格、毛玻璃吸顶，三套风格一键切换。
+// 清新薄荷：薄荷绿主色调，层叠轮播 + 圆角海报网格 + 毛玻璃吸顶栏。
 import core.widgets;
 import peek.home;
 
 // ---------------------------------------------------------------- 多风格
 
 widget skins {
-  mint:   { name: "清新薄荷", bg: 0xFFF4FBF7, card: 0xFFFFFFFF, ink: 0xFF2A3D34, ink2: 0xFF7A9A8C, accent: 0xFF5BB086, star: 0xFFF2B14A, shadow: 0x143D5A4A, chipOnText: 0xFFFFFFFF },
-  night:  { name: "夜色薄荷", bg: 0xFF1A2320, card: 0xFF26312C, ink: 0xFFEDF5F1, ink2: 0xFF93AFA3, accent: 0xFF7ED6AE, star: 0xFFF2B14A, shadow: 0x33000000, chipOnText: 0xFFFFFFFF },
-  glow:   { name: "流光", dynamic: true },
+  mint:  { name: "清新薄荷", bg: 0xFFF4FBF7, card: 0xFFFFFFFF, ink: 0xFF2A3D34, ink2: 0xFF7A9A8C, accent: 0xFF5BB086 },
+  night: { name: "夜色薄荷", bg: 0xFF1A2320, card: 0xFF26312C, ink: 0xFFEDF5F1, ink2: 0xFF93AFA3, accent: 0xFF7ED6AE },
+  glow:  { name: "流光", dynamic: true },
 } = SizedBoxShrink();
 
-// ---------------------------------------------------------------- 轮播
+// ---------------------------------------------------------------- 轮播卡片
 
-widget RecommendCard = GestureDetector(
+widget HeroCard = GestureDetector(
   onTap: event "openRecommend" { index: args.index },
   child: Container(
-    decoration: {
-      type: "box",
-      borderRadius: [ { x: 20.0 } ],
-      boxShadow: [ { color: data.home.skin.shadow, blurRadius: 20.0, offset: { x: 0.0, y: 8.0 } } ],
-    },
-    clipBehavior: "none",
+    padding: [ 4.0 ],
     child: ClipRRect(
-      borderRadius: [ { x: 20.0 } ],
+      borderRadius: [ { x: 18.0 } ],
       child: Stack(
         fit: "expand",
         children: [
           T4Image(
-            url: switch args.item.tmdb {
-              true: switch args.item.backdrop { "": args.item.pic, default: args.item.backdrop },
-              default: args.item.pic,
-            },
+            url: args.item.pic,
             fit: "cover",
             placeholderColor: data.home.skin.card,
           ),
@@ -40,58 +32,28 @@ widget RecommendCard = GestureDetector(
               gradient: {
                 type: "linear",
                 begin: { x: 0.0, y: 1.0 },
-                end: { x: 0.0, y: 0.0 },
+                end: { x: 0.0, y: 0.5 },
                 colors: [ 0xCC000000, 0x00000000 ],
               },
             },
           ),
           Positioned(
-            start: 20.0,
-            end: 20.0,
-            bottom: 20.0,
+            start: 16.0,
+            end: 16.0,
+            bottom: 16.0,
             child: Column(
               mainAxisSize: "min",
               crossAxisAlignment: "start",
               children: [
                 Text(
-                  text: switch args.item.titleLogo {
-                    "": args.item.name,
-                    default: args.item.name,
-                  },
+                  text: args.item.name,
                   maxLines: 2,
                   overflow: "ellipsis",
-                  style: { color: 0xFFFFFFFF, fontSize: 22.0, fontWeight: "w800", shadows: [ { color: 0x99000000, blurRadius: 8.0 } ] },
+                  style: { color: 0xFFFFFFFF, fontSize: 20.0, fontWeight: "w800" },
                 ),
-                Padding(
-                  padding: [ 0.0, 6.0, 0.0, 0.0 ],
-                  child: Row(
-                    mainAxisSize: "min",
-                    children: [
-                      switch args.item.rating {
-                        "": SizedBoxShrink(),
-                        default: Container(
-                          padding: [ 6.0, 2.0 ],
-                          margin: [ 0.0, 0.0, 8.0, 0.0 ],
-                          decoration: {
-                            type: "box",
-                            color: 0x33000000,
-                            borderRadius: [ { x: 4.0 } ],
-                          },
-                          child: Text(
-                            text: [ "★ ", args.item.rating ],
-                            style: { color: data.home.skin.star, fontSize: 12.0, fontWeight: "w700" },
-                          ),
-                        ),
-                      },
-                      Text(
-                        text: switch args.item.tmdb {
-                          true: [ args.item.tmdbYear, " · ", args.item.genres ],
-                          default: [ args.item.year, " · ", args.item.typeName ],
-                        },
-                        style: { color: 0xCCFFFFFF, fontSize: 13.0 },
-                      ),
-                    ],
-                  ),
+                Text(
+                  text: [ args.item.year, " · ", args.item.typeName ],
+                  style: { color: 0xB3FFFFFF, fontSize: 12.0 },
                 ),
               ],
             ),
@@ -102,130 +64,76 @@ widget RecommendCard = GestureDetector(
   ),
 );
 
-widget Hero = Container(
-  padding: [ 16.0, 12.0, 16.0, 0.0 ],
-  child: switch data.home.hasRecommend {
-    true: PeekCarousel(
-      style: "stack",
-      viewportFraction: 0.82,
-      autoPlay: true,
-      interval: 5000,
-      showIndicators: true,
-      indicatorAlignment: "end",
-      indicatorBottom: 6.0,
-      indicatorInset: 8.0,
-      activeColor: data.home.skin.accent,
-      inactiveColor: 0x55FFFFFF,
-      stackScale: 0.88,
-      stackOpacity: 0.5,
-      stackOffset: 0.14,
-      stackRotation: 0.0,
-      syncImmersivePalette: true,
-      children: [
-        ...for item in data.home.home.recommend:
-          RecommendCard(item: item, index: item.index),
-      ],
-    ),
-    default: SizedBoxShrink(),
-  },
-);
+// ---------------------------------------------------------------- 吸顶栏
 
-// ---------------------------------------------------------------- 吸顶栏组件
-
-widget ApiBtn = GestureDetector(
+widget ApiButton = GestureDetector(
   onTap: event "showApiConfigPicker" {},
   child: Container(
-    width: 38.0,
-    height: 38.0,
+    width: 40.0,
+    height: 40.0,
     alignment: { x: 0.0, y: 0.0 },
-    decoration: {
-      type: "box",
-      color: data.home.skin.accentSoft,
-      borderRadius: [ { x: 12.0 } ],
-    },
-    child: Icon(icon: data.home.icons.api, fontFamily: "MaterialIcons", size: 18.0, color: data.home.skin.accent),
+    child: Icon(icon: 0xF0616, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
   ),
 );
 
-widget SearchBtn = GestureDetector(
+widget SearchButton = GestureDetector(
   onTap: event "openSearch" {},
   child: Container(
-    width: 38.0,
-    height: 38.0,
+    width: 40.0,
+    height: 40.0,
     alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: data.home.icons.search, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
+    child: Icon(icon: 0xE567, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
   ),
 );
 
-widget ClassChip = GestureDetector(
+widget CategoryChip = GestureDetector(
   onTap: event "selectType" { typeId: args.item.typeId },
   child: Container(
     padding: [ 14.0, 0.0 ],
-    margin: [ 0.0, 8.0, 6.0, 8.0 ],
+    margin: [ 0.0, 8.0, 8.0, 8.0 ],
     alignment: { x: 0.0, y: 0.0 },
-    child: Column(
-      mainAxisSize: "min",
-      children: [
-        Text(
-          text: args.item.typeName,
-          style: {
-            color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
-            fontSize: 14.0,
-            fontWeight: switch args.item.selected { true: "w700", false: "w500" },
-          },
-        ),
-        Container(
-          margin: [ 0.0, 4.0, 0.0, 0.0 ],
-          height: 3.0,
-          width: switch args.item.selected { true: 18.0, false: 0.0 },
-          decoration: {
-            type: "box",
-            color: data.home.skin.accent,
-            borderRadius: [ { x: 2.0 } ],
-          },
-          duration: 220,
-          curve: "fastOutSlowIn",
-        ),
-      ],
+    child: Text(
+      text: args.item.typeName,
+      style: {
+        color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
+        fontSize: 14.0,
+        fontWeight: switch args.item.selected { true: "w700", false: "w500" },
+      },
     ),
   ),
 );
 
-widget PinnedHeader = PeekGlass(
-  blur: 20.0,
+widget PinnedBar = PeekGlass(
+  blur: 18.0,
   radius: 0.0,
-  tintColor: 0xCCFFFFFF,
+  tintColor: 0xE6FFFFFF,
   borderColor: 0x1A000000,
   child: Container(
-    padding: [ 12.0, 0.0, 12.0, 0.0 ],
+    padding: [ 12.0, 0.0 ],
     child: Column(
       mainAxisSize: "min",
       children: [
         Row(
           children: [
             Expanded(
-              child: Row(
-                mainAxisSize: "min",
-                children: [
-                  Text(
-                    text: data.home.source.name,
-                    style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
-                  ),
-                ],
+              child: Text(
+                text: data.home.source.name,
+                maxLines: 1,
+                overflow: "ellipsis",
+                style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
               ),
             ),
-            SearchBtn(),
-            ApiBtn(),
+            SearchButton(),
+            ApiButton(),
           ],
         ),
         SizedBox(
-          height: 38.0,
+          height: 36.0,
           child: ListView(
             scrollDirection: "horizontal",
-            padding: [ 0.0, 0.0, 0.0, 0.0 ],
             children: [
               ...for item in data.home.classes:
-                ClassChip(item: item),
+                CategoryChip(item: item),
             ],
           ),
         ),
@@ -234,7 +142,7 @@ widget PinnedHeader = PeekGlass(
   ),
 );
 
-// ---------------------------------------------------------------- 网格海报
+// ---------------------------------------------------------------- 海报网格
 
 widget Poster = GestureDetector(
   onTap: event "openItem" { index: args.item.index },
@@ -242,10 +150,9 @@ widget Poster = GestureDetector(
   child: Column(
     crossAxisAlignment: "start",
     children: [
-      ClipRRect(
-        borderRadius: [ { x: 12.0 } ],
-        child: AspectRatio(
-          aspectRatio: 0.6667,
+      Expanded(
+        child: ClipRRect(
+          borderRadius: [ { x: 10.0 } ],
           child: T4Image(
             url: args.item.pic,
             fit: "cover",
@@ -265,7 +172,7 @@ widget Poster = GestureDetector(
       Padding(
         padding: [ 2.0, 0.0 ],
         child: Text(
-          text: switch args.item.remarks { "": args.item.year, default: args.item.remarks },
+          text: args.item.remarks,
           maxLines: 1,
           overflow: "ellipsis",
           style: { color: data.home.skin.ink2, fontSize: 11.0 },
@@ -275,43 +182,58 @@ widget Poster = GestureDetector(
   ),
 );
 
-widget EmptyState = Center(
-  child: Column(
-    mainAxisSize: "min",
-    children: [
-      Icon(icon: data.home.icons.gridView, fontFamily: "MaterialIcons", size: 48.0, color: data.home.skin.hair),
-      Padding(
-        padding: [ 0.0, 12.0, 0.0, 0.0 ],
-        child: Text(
-          text: switch data.home.loading { true: "正在载入…", false: "暂无内容" },
-          style: { color: data.home.skin.ink2, fontSize: 14.0 },
-        ),
-      ),
-    ],
+widget Empty = Center(
+  child: Text(
+    text: switch data.home.loading { true: "正在载入…", false: "暂无内容" },
+    style: { color: data.home.skin.ink2 },
   ),
 );
 
-// ---------------------------------------------------------------- 根布局
+// ---------------------------------------------------------------- 首页根
 
 widget root = Container(
   color: data.home.skin.bg,
   duration: 600,
   child: PeekStickyGrid(
-    heroHeight: switch data.home.hasRecommend { true: 200.0, false: 0.0 },
-    hero: Hero(),
-    pinnedHeight: 96.0,
-    pinnedHeader: PinnedHeader(),
+    heroHeight: switch data.home.hasRecommend { true: 210.0, false: 0.0 },
+    hero: switch data.home.hasRecommend {
+      true: Container(
+        padding: [ 14.0, 10.0, 14.0, 0.0 ],
+        child: PeekCarousel(
+          style: "stack",
+          viewportFraction: 0.84,
+          autoPlay: true,
+          interval: 4500,
+          showIndicators: true,
+          indicatorAlignment: "end",
+          indicatorBottom: 4.0,
+          activeColor: data.home.skin.accent,
+          inactiveColor: 0x4DFFFFFF,
+          stackScale: 0.86,
+          stackOpacity: 0.5,
+          stackOffset: 0.12,
+          syncImmersivePalette: true,
+          children: [
+            ...for item in data.home.home.recommend:
+              HeroCard(item: item, index: item.index),
+          ],
+        ),
+      ),
+      default: SizedBoxShrink(),
+    },
+    pinnedHeight: 88.0,
+    pinnedHeader: PinnedBar(),
     sectionHeight: 0.0,
     sectionHeader: SizedBoxShrink(),
     onRefresh: event "refresh" {},
     refreshing: data.home.refreshing,
     refreshColor: data.home.skin.accent,
     refreshBackground: data.home.skin.bg,
-    empty: EmptyState(),
+    empty: Empty(),
     crossAxisCount: data.home.gridColumns,
     childAspectRatio: 0.62,
-    mainAxisSpacing: 16.0,
-    crossAxisSpacing: 12.0,
+    mainAxisSpacing: 14.0,
+    crossAxisSpacing: 10.0,
     horizontalPadding: 14.0,
     bottomPadding: 110.0,
     children: [
@@ -323,40 +245,24 @@ widget root = Container(
 
 // ---------------------------------------------------------------- 二级分类页
 
-widget Tab = GestureDetector(
+widget PageTab = GestureDetector(
   onTap: event "selectType" { typeId: args.item.typeId },
   child: Container(
     padding: [ 14.0, 0.0 ],
     margin: [ 0.0, 6.0, 6.0, 6.0 ],
     alignment: { x: 0.0, y: 0.0 },
-    child: Column(
-      mainAxisSize: "min",
-      children: [
-        Text(
-          text: args.item.typeName,
-          style: {
-            color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
-            fontSize: 14.0,
-            fontWeight: switch args.item.selected { true: "w700", false: "w500" },
-          },
-        ),
-        Container(
-          margin: [ 0.0, 4.0, 0.0, 0.0 ],
-          height: 3.0,
-          width: switch args.item.selected { true: 18.0, false: 0.0 },
-          decoration: {
-            type: "box",
-            color: data.home.skin.accent,
-            borderRadius: [ { x: 2.0 } ],
-          },
-          duration: 220,
-        ),
-      ],
+    child: Text(
+      text: args.item.typeName,
+      style: {
+        color: switch args.item.selected { true: data.home.skin.accent, false: data.home.skin.ink2 },
+        fontSize: 14.0,
+        fontWeight: switch args.item.selected { true: "w700", false: "w500" },
+      },
     ),
   ),
 );
 
-widget OptionChip = GestureDetector(
+widget PageFilter = GestureDetector(
   onTap: event "selectFilter" { key: args.item.filterKey, value: args.item.value },
   child: Container(
     padding: [ 10.0, 0.0 ],
@@ -378,7 +284,7 @@ widget OptionChip = GestureDetector(
   ),
 );
 
-widget FiltersPanel = Column(
+widget PageFilters = Column(
   mainAxisSize: "min",
   crossAxisAlignment: "start",
   children: [
@@ -389,7 +295,7 @@ widget FiltersPanel = Column(
         padding: [ 14.0, 0.0 ],
         children: [
           ...for item in data.home.classes:
-            Tab(item: item),
+            PageTab(item: item),
         ],
       ),
     ),
@@ -402,17 +308,14 @@ widget FiltersPanel = Column(
           children: [
             Padding(
               padding: [ 0.0, 4.0, 0.0, 2.0 ],
-              child: Text(
-                text: group.name,
-                style: { color: data.home.skin.ink2, fontSize: 12.0 },
-              ),
+              child: Text(text: group.name, style: { color: data.home.skin.ink2, fontSize: 12.0 }),
             ),
             Wrap(
               spacing: 4.0,
               runSpacing: 2.0,
               children: [
                 ...for option in group.options:
-                  OptionChip(item: option),
+                  PageFilter(item: option),
               ],
             ),
           ],
@@ -430,7 +333,7 @@ widget categoryPage = Container(
       PeekStickyGrid(
         topPadding: 52.0,
         heroHeight: -1.0,
-        hero: FiltersPanel(),
+        hero: PageFilters(),
         pinnedHeight: 0.0,
         pinnedHeader: SizedBoxShrink(),
         sectionHeight: 0.0,
@@ -440,7 +343,7 @@ widget categoryPage = Container(
         refreshing: data.home.refreshing,
         refreshColor: data.home.skin.accent,
         refreshBackground: data.home.skin.bg,
-        empty: EmptyState(),
+        empty: Empty(),
         crossAxisCount: data.home.metrics.gridColumns,
         childAspectRatio: data.home.metrics.gridRatio,
         mainAxisSpacing: 16.0,
@@ -469,7 +372,7 @@ widget categoryPage = Container(
                       width: 48.0,
                       height: 48.0,
                       alignment: { x: 0.0, y: 0.0 },
-                      child: Icon(icon: data.home.icons.backIos, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+                      child: Icon(icon: 0xE094, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
                     ),
                   ),
                   Expanded(
