@@ -1,0 +1,353 @@
+// 薄雾晨光：柔和毛玻璃 + 低饱和渐变 + 层叠轮播 + 细线描边海报 + 极简信息。
+// 核心质感：半透毛玻璃叠层 + 多层渐变柔和光 + 海报仅 1px 浅描边不画阴影。
+import core.widgets;
+import peek.home;
+
+// ---------------------------------------------------------------- 多风格
+
+widget skins {
+  mist: { name: "薄雾晨光", bg: 0xFFF5F3F0, card: 0xFFFFFFFF, ink: 0xFF1F1D1A, ink2: 0xFF8A8580, accent: 0xFF7C9A92 },
+  lavender: { name: "薄雾紫", bg: 0xFFF8F5FC, card: 0xFFFFFFFF, ink: 0xFF221E28, ink2: 0xFF8F8899, accent: 0xFF9B8AC4 },
+  glow: { name: "流光", dynamic: true },
+} = SizedBoxShrink();
+
+// ---------------------------------------------------------------- Hero：柔和渐变压暗 + 底部渐隐
+
+widget HeroArt = T4Image(
+  url: switch args.item.backdrop { "": args.item.pic, default: args.item.backdrop },
+  fit: "cover",
+  alignment: switch args.item.backdrop { "": "topCenter", default: "center" },
+  placeholderColor: 0x00000000,
+  fadeBottom: 0.6,
+  fadeLeft: 0.0,
+  drift: true,
+);
+
+widget HeroShade = Container(
+  decoration: {
+    type: "box",
+    gradient: {
+      type: "linear",
+      begin: { x: 0.0, y: -1.0 },
+      end: { x: 0.0, y: 1.0 },
+      colors: [ 0x22000000, 0x00000000, 0x00000000, 0xAAFFFFFF, 0xFFFFFFFF ],
+      stops: [ 0.0, 0.2, 0.6, 0.85, 1.0 ],
+    },
+  },
+);
+
+widget HeroTitle = switch args.item.titleLogo {
+  "": Text(
+    text: args.item.name,
+    maxLines: 2,
+    overflow: "ellipsis",
+    textAlign: args.align,
+    style: {
+      color: 0xFFFFFFFF,
+      fontSize: args.size,
+      fontWeight: "w900",
+      height: 1.08,
+      letterSpacing: -0.3,
+      shadows: [ { color: 0x66000000, blurRadius: 18.0, offset: { x: 0.0, y: 2.0 } } ],
+    },
+  ),
+  default: Container(
+    height: args.height, constraints: { maxWidth: args.maxWidth }, alignment: args.box,
+    child: T4Image(url: args.item.titleLogo, fit: "contain", alignment: args.alignment, placeholderColor: 0x00000000),
+  ),
+};
+
+widget HeroInfoText = Text(
+  text: args.text,
+  maxLines: 1, overflow: "ellipsis",
+  style: { color: 0xCCFFFFFF, fontSize: 12.0, fontWeight: "w600", height: 1.0 },
+);
+
+widget HeroMeta = Align(
+  alignment: { x: 0.0, y: 1.0 },
+  child: Padding(
+    padding: [ 24.0, 0.0, 24.0, 40.0 ],
+    child: Column(
+      mainAxisSize: "min", crossAxisAlignment: "center",
+      children: [
+        HeroTitle(item: args.item, align: "center", size: 28.0, height: 64.0, maxWidth: 280.0, alignment: "bottomCenter", box: { x: 0.0, y: 1.0 }),
+        Padding(
+          padding: [ 0.0, 8.0, 0.0, 0.0 ],
+          child: Row(
+            mainAxisSize: "min", crossAxisAlignment: "center",
+            children: [
+              HeroInfoText(text: switch args.item.tmdb { true: args.item.tmdbYear, false: args.item.year }),
+              Padding(padding: [ 8.0, 0.0 ], child: Container(width: 3.0, height: 3.0, decoration: { type: "box", color: 0x66FFFFFF, borderRadius: [ { x: 1.5 } ] })),
+              HeroInfoText(text: switch args.item.tmdb { true: args.item.genres, false: args.item.typeName }),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+
+widget HeroSlide = GestureDetector(
+  onTap: event "openRecommend" { index: args.item.index },
+  child: Container(
+    margin: [ 6.0, 6.0 ],
+    clipBehavior: "none",
+    child: ClipRRect(
+      borderRadius: [ { x: 24.0 } ],
+      child: Stack(
+        fit: "expand",
+        children: [
+          HeroArt(item: args.item),
+          HeroShade(),
+          HeroMeta(item: args.item),
+        ],
+      ),
+    ),
+  ),
+);
+
+// ---------------------------------------------------------------- 分类胶囊（低对比毛玻璃）
+
+widget CategoryChip = GestureDetector(
+  onTap: event "selectType" { typeId: args.item.typeId },
+  child: PeekGlass(
+    blur: 12.0, radius: 20.0,
+    tintColor: switch args.item.selected { true: data.home.skin.accent, false: 0x12000000 },
+    borderColor: switch args.item.selected { true: 0x55FFFFFF, false: 0x16000000 },
+    child: Container(
+      height: 32.0, padding: [ 16.0, 0.0 ],
+      alignment: { x: 0.0, y: 0.0 },
+      child: Text(
+        text: args.item.typeName, maxLines: 1, overflow: "ellipsis",
+        style: {
+          color: switch args.item.selected { true: 0xFFFFFFFF, false: data.home.skin.ink },
+          fontSize: 12.0, fontWeight: "w600", height: 1.0,
+        },
+      ),
+    ),
+  ),
+);
+
+widget FilterOption = GestureDetector(
+  onTap: event "selectFilter" { key: args.item.filterKey, value: args.item.value },
+  child: PeekGlass(
+    blur: 10.0, radius: 14.0,
+    tintColor: switch args.item.selected { true: data.home.skin.accent, false: 0x0D000000 },
+    borderColor: switch args.item.selected { true: 0x44FFFFFF, false: 0x12000000 },
+    child: Container(
+      height: 26.0, padding: [ 10.0, 0.0 ],
+      alignment: { x: 0.0, y: 0.0 },
+      child: Text(
+        text: args.item.name, maxLines: 1, overflow: "ellipsis",
+        style: {
+          color: switch args.item.selected { true: 0xFFFFFFFF, false: data.home.skin.ink },
+          fontSize: 11.0, fontWeight: "w500", height: 1.0,
+        },
+      ),
+    ),
+  ),
+);
+
+widget FilterRow = Row(
+  children: [
+    Expanded(
+      child: ListView(
+        scrollDirection: "horizontal",
+        children: [ ...for option in args.group.options: Padding(padding: [ 0.0, 1.0, 8.0, 1.0 ], child: FilterOption(item: option)) ],
+      ),
+    ),
+    switch args.group.canExpand {
+      true: Padding(padding: [ 6.0, 1.0, 0.0, 1.0 ], child: TinyToolButton(icon: data.home.icons.expand, action: event "showFilterPicker" { key: args.group.key })),
+      false: SizedBoxShrink(),
+    },
+  ],
+);
+
+widget CategoryHeader = Container(
+  color: 0x00000000,
+  child: Column(
+    children: [
+      Container(
+        height: 54.0, padding: [ 14.0, 6.0, 14.0, 6.0 ],
+        child: PeekGlass(
+          blur: 14.0, radius: 24.0,
+          tintColor: 0x14000000, borderColor: 0x12000000,
+          child: Container(
+            padding: [ 8.0, 0.0 ],
+            child: ListView(
+              scrollDirection: "horizontal",
+              children: [ ...for item in data.home.classes: Padding(padding: [ 0.0, 6.0, 8.0, 6.0 ], child: CategoryChip(item: item)) ],
+            ),
+          ),
+        ),
+      ),
+      switch data.home.showFilters {
+        true: Container(
+          padding: [ 14.0, 4.0, 14.0, 12.0 ],
+          child: PeekGlass(
+            blur: 14.0, radius: 20.0,
+            tintColor: 0x16000000, borderColor: 0x12000000,
+            child: Container(
+              height: data.home.filterPanelHeight, padding: [ 10.0, 4.0 ],
+              child: ListView(
+                primary: false, padding: [ 0.0 ],
+                children: [ ...for group in data.home.filters: Container(height: 28.0, child: FilterRow(group: group)) ],
+              ),
+            ),
+          ),
+        ),
+        false: SizedBoxShrink(),
+      },
+    ],
+  ),
+);
+
+// ---------------------------------------------------------------- 工具按钮 + SectionBar
+
+widget TinyToolButton = GestureDetector(
+  onTap: args.action,
+  child: PeekGlass(
+    blur: 12.0, radius: 12.0,
+    tintColor: 0x1A000000, borderColor: 0x14000000,
+    child: Container(
+      width: 23.0, height: 26.0,
+      alignment: { x: 0.0, y: 0.0 },
+      child: Icon(icon: args.icon, fontFamily: "MaterialIcons", size: 13.0, color: data.home.skin.ink),
+    ),
+  ),
+);
+
+widget SectionTitleSource = GestureDetector(
+  onTap: event "showSourcePicker" {},
+  child: Column(
+    mainAxisSize: "min", crossAxisAlignment: "start",
+    children: [
+      Text(
+        text: data.home.source.name, maxLines: 1, overflow: "ellipsis",
+        style: { color: data.home.skin.ink, fontSize: 18.0, fontWeight: "w800" },
+      ),
+      Padding(
+        padding: [ 0.0, 3.0, 0.0, 0.0 ],
+        child: Text(
+          text: [ data.home.totalLabel, " 部内容" ], maxLines: 1, overflow: "ellipsis",
+          style: { color: data.home.skin.ink2, fontSize: 10.0, letterSpacing: 0.3 },
+        ),
+      ),
+    ],
+  ),
+);
+
+widget SectionBar = Container(
+  color: 0x00000000, padding: [ 16.0, 8.0, 16.0, 10.0 ],
+  child: Row(
+    children: [
+      Expanded(child: SectionTitleSource()),
+      Row(
+        children: [
+          TinyToolButton(icon: data.home.icons.search, action: event "openSearch" {}),
+          Padding(padding: [ 4.0, 0.0 ], child: TinyToolButton(icon: data.home.icons.api, action: event "showApiConfigPicker" {})),
+          Padding(padding: [ 4.0, 0.0 ], child: TinyToolButton(icon: data.home.icons.filter, action: event "toggleFilters" {})),
+          Padding(padding: [ 4.0, 0.0 ], child: TinyToolButton(icon: data.home.icons.layout, action: event "showDisplayStylePicker" {})),
+          Padding(padding: [ 4.0, 0.0 ], child: TinyToolButton(icon: data.home.icons.refresh, action: event "refresh" {})),
+        ],
+      ),
+    ],
+  ),
+);
+
+// ---------------------------------------------------------------- 海报卡片（仅描边无阴影，柔和高级）
+
+widget PosterCard = GestureDetector(
+  onTap: event "openItem" { index: args.item.index },
+  onLongPress: event "longPressItem" { index: args.item.index },
+  child: Container(
+    decoration: {
+      type: "box",
+      borderRadius: [ { x: 16.0 } ],
+      color: 0x08000000,
+      border: [ { color: 0x12000000, width: 1.0 } ],
+    },
+    child: Column(
+      crossAxisAlignment: "start",
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: [ { x: 16.0 }, { x: 16.0, y: 0.0 } ],
+            child: T4Image(url: args.item.pic),
+          ),
+        ),
+        Container(
+          padding: [ 10.0, 8.0 ],
+          child: Column(
+            mainAxisSize: "min", crossAxisAlignment: "start",
+            children: [
+              Text(
+                text: args.item.name, maxLines: 1, overflow: "ellipsis",
+                style: { color: data.home.skin.ink, fontSize: 12.0, fontWeight: "w700" },
+              ),
+              switch args.item.remarks {
+                "": SizedBoxShrink(),
+                default: Padding(
+                  padding: [ 0.0, 2.0, 0.0, 0.0 ],
+                  child: Text(
+                    text: args.item.remarks, maxLines: 1, overflow: "ellipsis",
+                    style: { color: data.home.skin.ink2, fontSize: 10.0 },
+                  ),
+                ),
+              },
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+
+// ---------------------------------------------------------------- 空态 & 根
+
+widget EmptyState = switch data.home.loading {
+  true: Center(child: Text(text: "正在载入…", style: { color: data.home.skin.ink2, fontSize: 13.0 })),
+  false: Center(child: Text(text: "暂无内容", style: { color: data.home.skin.ink2, fontSize: 13.0 })),
+};
+
+widget root = Container(
+  color: data.home.skin.bg,
+  duration: 700,
+  child: Stack(
+    fit: "expand",
+    children: [
+      PeekImmersiveBackdrop(
+        imageUrl: data.home.immersive.imageUrl,
+        primaryColor: switch data.home.hasRecommend { true: data.home.immersive.primaryColor, default: 0x00000000 },
+        secondaryColor: switch data.home.hasRecommend { true: data.home.immersive.secondaryColor, default: 0x00000000 },
+        backgroundColor: 0x00000000,
+      ),
+      PeekStickyGrid(
+        heroHeight: switch data.home.hasRecommend { true: switch data.home.gridColumns { 3: 240.0, default: 280.0 }, false: 0.0 },
+        hero: switch data.home.hasRecommend {
+          true: PeekCarousel(
+            autoPlay: true, style: "stack", viewportFraction: 0.84,
+            showIndicators: true, indicatorAlignment: "end",
+            indicatorInset: 24.0, indicatorBottom: 14.0,
+            activeColor: data.home.skin.accent, inactiveColor: 0x33000000,
+            stackScale: 0.86, stackOpacity: 0.5, stackOffset: 0.12,
+            syncImmersivePalette: true, interval: 4500,
+            children: [ ...for item in data.home.home.recommend: HeroSlide(item: item) ],
+          ),
+          false: SizedBoxShrink(),
+        },
+        pinnedHeight: data.home.stickyHeaderHeight,
+        pinnedHeader: CategoryHeader(),
+        sectionHeight: 60.0,
+        sectionHeader: SectionBar(),
+        onRefresh: event "refresh" {}, refreshing: data.home.refreshing,
+        refreshColor: data.home.skin.accent, refreshBackground: 0x00000000,
+        crossAxisCount: data.home.gridColumns, childAspectRatio: 0.72,
+        mainAxisSpacing: 12.0, crossAxisSpacing: 10.0,
+        horizontalPadding: 14.0, bottomPadding: 106.0,
+        empty: EmptyState(),
+        children: [ ...for item in data.home.items: PosterCard(item: item) ],
+      ),
+    ],
+  ),
+);
