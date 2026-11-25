@@ -1,4 +1,4 @@
-// 极光渐变：紫蓝青渐变主色 + 层叠轮播 + 圆角海报网格。
+// 极光渐变：紫蓝青渐变主色 + 层叠轮播 + 分类胶囊 + 一排图标按钮。
 import core.widgets;
 import peek.home;
 
@@ -9,6 +9,81 @@ widget skins {
   peach:  { name: "蜜桃渐变", bg: 0xFFFFF5F0, card: 0xFFFFFFFF, ink: 0xFF3D2E2A, ink2: 0xFFA89B95, accent: 0xFFFF6B9D },
   glow:   { name: "流光", dynamic: true },
 } = SizedBoxShrink();
+
+// ---------------------------------------------------------------- 海报（快速开始示例）
+
+widget Poster = GestureDetector(
+  onTap: event "openItem" { index: args.item.index },
+  onLongPress: event "longPressItem" { index: args.item.index },
+  child: Column(
+    crossAxisAlignment: "start",
+    children: [
+      Expanded(
+        child: ClipRRect(
+          borderRadius: [ { x: 10.0 } ],
+          child: T4Image(
+            url: args.item.pic,
+            placeholderColor: data.home.skin.card,
+          ),
+        ),
+      ),
+      Padding(
+        padding: [ 2.0, 6.0, 2.0, 0.0 ],
+        child: Text(
+          text: args.item.name,
+          maxLines: 1,
+          overflow: "ellipsis",
+          style: { color: data.home.skin.ink, fontSize: 13.0, fontWeight: "w600" },
+        ),
+      ),
+      Padding(
+        padding: [ 2.0, 0.0 ],
+        child: Text(
+          text: args.item.remarks,
+          maxLines: 1,
+          overflow: "ellipsis",
+          style: { color: data.home.skin.ink2, fontSize: 11.0 },
+        ),
+      ),
+    ],
+  ),
+);
+
+// ---------------------------------------------------------------- 分类胶囊（快速开始示例，选中态用渐变）
+
+widget Chip = GestureDetector(
+  onTap: event "selectType" { typeId: args.item.typeId },
+  child: Container(
+    margin: [ 0.0, 8.0, 8.0, 8.0 ],
+    padding: [ 14.0, 0.0 ],
+    alignment: { x: 0.0, y: 0.0 },
+    decoration: switch args.item.selected {
+      true: {
+        type: "box",
+        gradient: {
+          type: "linear",
+          begin: { x: 0.0, y: 0.0 },
+          end: { x: 1.0, y: 0.0 },
+          colors: [ 0xFF6C5CE7, 0xFF0984E3, 0xFF00B894 ],
+        },
+        borderRadius: [ { x: 16.0 } ],
+      },
+      false: {
+        type: "box",
+        color: 0x00000000,
+        borderRadius: [ { x: 16.0 } ],
+      },
+    },
+    child: Text(
+      text: args.item.typeName,
+      style: {
+        color: switch args.item.selected { true: 0xFFFFFFFF, false: data.home.skin.ink },
+        fontSize: 14.0,
+        fontWeight: switch args.item.selected { true: "w700", false: "w400" },
+      },
+    ),
+  ),
+);
 
 // ---------------------------------------------------------------- 轮播推荐卡
 
@@ -68,94 +143,7 @@ widget HeroCard = GestureDetector(
   ),
 );
 
-// ---------------------------------------------------------------- 分类胶囊（吸顶栏）
-
-widget Chip = GestureDetector(
-  onTap: event "selectType" { typeId: args.item.typeId },
-  child: Container(
-    margin: [ 0.0, 8.0, 8.0, 8.0 ],
-    padding: [ 14.0, 0.0 ],
-    alignment: { x: 0.0, y: 0.0 },
-    decoration: switch args.item.selected {
-      true: {
-        type: "box",
-        gradient: {
-          type: "linear",
-          begin: { x: 0.0, y: 0.0 },
-          end: { x: 1.0, y: 0.0 },
-          colors: [ 0xFF6C5CE7, 0xFF0984E3, 0xFF00B894 ],
-        },
-        borderRadius: [ { x: 16.0 } ],
-      },
-      false: {
-        type: "box",
-        color: 0x00000000,
-        borderRadius: [ { x: 16.0 } ],
-      },
-    },
-    child: Text(
-      text: args.item.typeName,
-      style: {
-        color: switch args.item.selected { true: 0xFFFFFFFF, false: data.home.skin.ink },
-        fontSize: 14.0,
-        fontWeight: switch args.item.selected { true: "w700", false: "w400" },
-      },
-    ),
-  ),
-);
-
-// ---------------------------------------------------------------- 按钮栏里的图标按钮
-
-widget ToolBtn = GestureDetector(
-  onTap: args.event,
-  child: Container(
-    width: 40.0,
-    height: 40.0,
-    alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: args.icon, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink2),
-  ),
-);
-
-// ---------------------------------------------------------------- 海报
-
-widget Poster = GestureDetector(
-  onTap: event "openItem" { index: args.item.index },
-  onLongPress: event "longPressItem" { index: args.item.index },
-  child: Column(
-    crossAxisAlignment: "start",
-    children: [
-      Expanded(
-        child: ClipRRect(
-          borderRadius: [ { x: 12.0 } ],
-          child: T4Image(
-            url: args.item.pic,
-            placeholderColor: data.home.skin.card,
-          ),
-        ),
-      ),
-      Padding(
-        padding: [ 2.0, 6.0, 2.0, 0.0 ],
-        child: Text(
-          text: args.item.name,
-          maxLines: 1,
-          overflow: "ellipsis",
-          style: { color: data.home.skin.ink, fontSize: 13.0, fontWeight: "w600" },
-        ),
-      ),
-      Padding(
-        padding: [ 2.0, 0.0 ],
-        child: Text(
-          text: args.item.remarks,
-          maxLines: 1,
-          overflow: "ellipsis",
-          style: { color: data.home.skin.ink2, fontSize: 11.0 },
-        ),
-      ),
-    ],
-  ),
-);
-
-// ---------------------------------------------------------------- 首页根
+// ---------------------------------------------------------------- 首页根（严格对齐快速开始 Row 结构）
 
 widget root = Container(
   duration: 600,
@@ -172,7 +160,7 @@ widget root = Container(
     },
   },
   child: PeekStickyGrid(
-    // hero: 轮播，滚走
+    // hero
     heroHeight: switch data.home.hasRecommend { true: 220.0, false: 0.0 },
     hero: switch data.home.hasRecommend {
       true: Container(
@@ -199,40 +187,84 @@ widget root = Container(
       default: SizedBoxShrink(),
     },
 
-    // pinnedHeader: 分类胶囊横排，吸顶
-    pinnedHeight: 48.0,
+    // pinnedHeader: Row = Expanded(胶囊横排) + 7 个图标按钮
+    pinnedHeight: 52.0,
     pinnedHeader: Container(
-      padding: [ 8.0, 0.0 ],
-      child: SizedBox(
-        height: 40.0,
-        child: ListView(
-          scrollDirection: "horizontal",
-          padding: [ 12.0, 0.0 ],
-          children: [
-            ...for item in data.home.classes:
-              Chip(item: item),
-          ],
-        ),
-      ),
-    ),
-
-    // sectionHeader: 7 个图标按钮栏，吸顶在分类胶囊下面
-    sectionHeight: 44.0,
-    sectionHeader: Container(
-      padding: [ 0.0, 0.0, 0.0, 4.0 ],
       child: Row(
         children: [
-          Expanded(child: SizedBoxShrink()),
-          ToolBtn(event: event "toggleFilters" {},       icon: data.home.icons.filter),
-          ToolBtn(event: event "openSearch" {},          icon: data.home.icons.search),
-          ToolBtn(event: event "refresh" {},             icon: data.home.icons.refresh),
-          ToolBtn(event: event "openFavorite" {},        icon: data.home.icons.favorite),
-          ToolBtn(event: event "showSourcePicker" {},    icon: data.home.icons.source),
-          ToolBtn(event: event "showApiConfigPicker" {}, icon: data.home.icons.api),
-          ToolBtn(event: event "cycleDisplayStyle" {},   icon: data.home.icons.layout),
+          Expanded(
+            child: ListView(
+              scrollDirection: "horizontal",
+              padding: [ 12.0, 0.0 ],
+              children: [
+                ...for item in data.home.classes:
+                  Chip(item: item),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: event "toggleFilters" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.filter, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "openSearch" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.search, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "refresh" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.refresh, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "openFavorite" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.favorite, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "showSourcePicker" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.source, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "showApiConfigPicker" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.api, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
+          GestureDetector(
+            onTap: event "cycleDisplayStyle" {},
+            child: Container(
+              width: 40.0,
+              alignment: { x: 0.0, y: 0.0 },
+              child: Icon(icon: data.home.icons.layout, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+            ),
+          ),
         ],
       ),
     ),
+
+    // sectionHeader 不显示
+    sectionHeight: 0.0,
+    sectionHeader: SizedBoxShrink(),
 
     // 下拉刷新
     onRefresh: event "refresh" {},
