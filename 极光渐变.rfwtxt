@@ -349,33 +349,34 @@ widget HeroSlide = GestureDetector(
               },
             },
           ),
-          Positioned(
-            left: 16.0,
-            right: 16.0,
-            bottom: 16.0,
-            child: Column(
-              mainAxisSize: "min",
-              crossAxisAlignment: "start",
-              children: [
-                Text(
-                  text: args.item.name,
-                  maxLines: 2,
-                  overflow: "ellipsis",
-                  style: {
-                    color: 0xFFFFFFFF,
-                    fontSize: 20.0,
-                    fontWeight: "w800",
-                    shadows: [ { color: 0x8C000000, blurRadius: 20.0, offset: { x: 0.0, y: 2.0 } } ],
-                  },
-                ),
-                Padding(
-                  padding: [ 0.0, 4.0, 0.0, 0.0 ],
-                  child: Text(
-                    text: [ args.item.year, " · ", args.item.typeName ],
-                    style: { color: 0xCCFFFFFF, fontSize: 12.0 },
+          Align(
+            alignment: { x: -1.0, y: 1.0 },
+            child: Padding(
+              padding: [ 16.0, 0.0, 16.0, 16.0 ],
+              child: Column(
+                mainAxisSize: "min",
+                crossAxisAlignment: "start",
+                children: [
+                  Text(
+                    text: args.item.name,
+                    maxLines: 2,
+                    overflow: "ellipsis",
+                    style: {
+                      color: 0xFFFFFFFF,
+                      fontSize: 20.0,
+                      fontWeight: "w800",
+                      shadows: [ { color: 0x8C000000, blurRadius: 20.0, offset: { x: 0.0, y: 2.0 } } ],
+                    },
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: [ 0.0, 4.0, 0.0, 0.0 ],
+                    child: Text(
+                      text: [ args.item.year, " · ", args.item.typeName ],
+                      style: { color: 0xCCFFFFFF, fontSize: 12.0 },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
