@@ -72,7 +72,7 @@ widget HeroCard = GestureDetector(
   ),
 );
 
-// ---------------------------------------------------------------- 分类胶囊
+// ---------------------------------------------------------------- 分类胶囊（吸顶栏里横排）
 
 widget Chip = GestureDetector(
   onTap: event "selectType" { typeId: args.item.typeId },
@@ -96,58 +96,67 @@ widget Chip = GestureDetector(
   ),
 );
 
-// ---------------------------------------------------------------- 图标按钮
-
-widget ApiButton = GestureDetector(
-  onTap: event "showApiConfigPicker" {},
-  child: Container(
-    width: 44.0,
-    alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: data.home.icons.api, fontFamily: "MaterialIcons", size: 20.0, color: data.home.skin.ink),
-  ),
-);
-
-widget SearchButton = GestureDetector(
-  onTap: event "openSearch" {},
-  child: Container(
-    width: 44.0,
-    alignment: { x: 0.0, y: 0.0 },
-    child: Icon(icon: data.home.icons.search, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
-  ),
-);
-
-// ---------------------------------------------------------------- 吸顶栏
+// ---------------------------------------------------------------- 吸顶栏：站源名 + 分类胶囊
 
 widget PinnedHeader = Container(
   color: data.home.skin.bg,
   child: Column(
     mainAxisSize: "min",
     children: [
-      Row(
-        children: [
-          Expanded(
-            child: Text(
-              text: data.home.source.name,
-              maxLines: 1,
-              overflow: "ellipsis",
-              style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
+      Padding(
+        padding: [ 16.0, 12.0, 16.0, 0.0 ],
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text: data.home.source.name,
+                maxLines: 1,
+                overflow: "ellipsis",
+                style: { color: data.home.skin.ink, fontSize: 16.0, fontWeight: "w700" },
+              ),
             ),
-          ),
-          SearchButton(),
-          ApiButton(),
-        ],
+          ],
+        ),
       ),
       SizedBox(
-        height: 36.0,
+        height: 40.0,
         child: ListView(
           scrollDirection: "horizontal",
-          padding: [ 0.0, 0.0 ],
+          padding: [ 12.0, 0.0 ],
           children: [
             ...for item in data.home.classes:
               Chip(item: item),
           ],
         ),
       ),
+    ],
+  ),
+);
+
+// ---------------------------------------------------------------- 按钮栏（sectionHeader）：筛选 / 搜索 / 站源 / 刷新 / 收藏 / 接口 / 样式
+
+widget ToolBtn = GestureDetector(
+  onTap: args.event,
+  child: Container(
+    width: 38.0,
+    height: 38.0,
+    alignment: { x: 0.0, y: 0.0 },
+    child: Icon(icon: args.icon, fontFamily: "MaterialIcons", size: 22.0, color: data.home.skin.ink),
+  ),
+);
+
+widget ToolRow = Container(
+  color: data.home.skin.bg,
+  child: Row(
+    children: [
+      Expanded(child: SizedBoxShrink()),
+      ToolBtn(event: event "toggleFilters" {},      icon: data.home.icons.filter),
+      ToolBtn(event: event "openSearch" {},         icon: data.home.icons.search),
+      ToolBtn(event: event "showSourcePicker" {},   icon: data.home.icons.source),
+      ToolBtn(event: event "refresh" {},            icon: data.home.icons.refresh),
+      ToolBtn(event: event "openFavorite" {},       icon: data.home.icons.favorite),
+      ToolBtn(event: event "showApiConfigPicker" {}, icon: data.home.icons.api),
+      ToolBtn(event: event "cycleDisplayStyle" {},  icon: data.home.icons.layout),
     ],
   ),
 );
@@ -222,10 +231,10 @@ widget root = Container(
       ),
       default: SizedBoxShrink(),
     },
-    pinnedHeight: 92.0,
+    pinnedHeight: 96.0,
     pinnedHeader: PinnedHeader(),
-    sectionHeight: 0.0,
-    sectionHeader: SizedBoxShrink(),
+    sectionHeight: 44.0,
+    sectionHeader: ToolRow(),
     onRefresh: event "refresh" {},
     refreshing: data.home.refreshing,
     refreshColor: data.home.skin.accent,
