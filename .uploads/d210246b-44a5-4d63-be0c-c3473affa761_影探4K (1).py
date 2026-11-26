@@ -17,11 +17,11 @@ except Exception:
 
 HOST = "http://cms.lyyytv.cn"
 UA = "okhttp/4.12.0"
-# parsesId: 实测 6=通用解析（爱奇艺/优酷/腾讯可用），5=专线
-CHAIN_API = "http://fys.lyyytv.cn/api/index?parsesId=5&appid=10001&videoUrl="
-PARSE_API = "http://fys.lyyytv.cn/api/index?parsesId=6&appid=10001&videoUrl="
-FALLBACK_PARSE_API = "http://fys.lyyytv.cn/api/index?parsesId=5&appid=10001&videoUrl="
-FALLBACK_CHAIN_API = "http://fys.lyyytv.cn/api/index?parsesId=6&appid=10001&videoUrl="
+# parsesId 实测: 6/7=通用解析(爱奇艺/优酷/腾讯可用), 5=专线(基本失效)
+# 通用解析三档回退: 6 → 7 → 5
+PARSE_IDS_PAGE = [6, 7, 5]    # 第三方页面解析（爱奇艺等）
+PARSE_IDS_MEDIA = [5, 6, 7]   # 直链解析（专线优先，再回退通用）
+PARSE_BASE = "http://fys.lyyytv.cn/api/index?parsesId=%d&appid=10001&videoUrl="
 CMS_KEY = "wP5bvxoc3yv7FoBQENFZuAF0EUYr4LTy"
 DEC_PREFIX = "https://baidu.con/"
 YT4K_HOST = re.compile(r"(?:^|\.)(?:ym4kjx|hd4kjx|sd4kjx|mm4kjx|mv4kjx|vk4kjx)\.lyyytv\.cn$", re.I)
@@ -236,6 +236,20 @@ class Spider(BaseSpider):
                 time.sleep(0.4)
         return {}
 
+    def _head_ok(self, url, timeout=8):
+        """HEAD 请求检查直链是否 2xx 可达（避免把 404 坏链返回给播放器）"""
+        try:
+            h = {"User-Agent": UA, "Range": "bytes=0-0"}
+            req = urllib.request.Request(url, headers=h, method="GET")
+            req.add_header("User-Agent", UA)
+            r = urllib.request.urlopen(req, timeout=timeout)
+            code = getattr(r, "status", 0)
+            if not code:
+                code = 200 if r.read(1) is not None else 0
+            return 200 <= code < 400
+        except Exception:
+            return False
+
     def _cms(self, action, params):
         q = urllib.parse.urlencode(params or {})
         return self._get("%s/api.php/app/%s?%s" % (self.host, action, q))
@@ -358,8 +372,24 @@ class Spider(BaseSpider):
         while len(froms) < len(urls):
             froms.append("线路%d" % (len(froms) + 1))
         pairs = [(f, u) for f, u in zip(froms, urls) if u]
-        # 将 4K 线路置前，同时保持线路名与播放地址一一对应。
-        pairs.sort(key=lambda item: 0 if "4k" in item[0].lower() else 1)
+        # 预检：直链（lyyytv.cn 域名）做 HEAD 验证，不可达则移除/降权
+        checked = []
+        for f, u in pairs:
+            host = urllib.parse.urlparse(u.split("#")[0].split("$")[-1]).hostname or ""
+            if YT4K_HOST.search(host) or "lyyytv.cn" in host:
+                # 先试第一条直链做预检，只要首集挂了基本整条线路就废了
+                first_ep = u.split("#")[0]
+                first_url = first_ep.split("$", 1)[1] if "$" in first_ep else first_ep
+                if self._head_ok(first_url):
+                    checked.append((f, u, True))
+                else:
+                    # 标记失效，排到最后
+                    checked.append((f + "(失效)", u, False))
+            else:
+                checked.append((f, u, True))
+        # 排序：可用线路优先，失效线路置底；4K 线路如果可用则置前
+        checked.sort(key=lambda x: (0 if x[2] else 2, 0 if x[2] and "4k" in x[0].lower() else 1))
+        pairs = [(f, u) for f, u, _ in checked]
         vod = {
             "vod_id": vid,
             "vod_name": _clean(d.get("vod_name")),
@@ -399,13 +429,28 @@ class Spider(BaseSpider):
             if MEDIA_RE.search(url):
                 host = urllib.parse.urlparse(url).hostname or ""
                 if YT4K_HOST.search(host) or "lyyytv.cn" in host:
-                    real = self._chain(url)
+                    # 直链：先 HEAD 预检，确认可达再返回
+                    if not self._head_ok(url):
+                        # 坏链（404/不可达），尝试解析接口，全部失败就放弃
+                        real = self._try_parses(url, PARSE_IDS_MEDIA)
+                        if real:
+                            return {"parse": 0, "playUrl": "", "url": real,
+                                    "header": '{"User-Agent":"%s"}' % UA}
+                        # 彻底不可用，返回 parse=0 + 空 url，让播放器跳过
+                        return {"parse": 0, "playUrl": "", "url": "", "header": ""}
+                    # 可达 → 先试解析接口拿最稳的地址
+                    real = self._try_parses(url, PARSE_IDS_MEDIA)
                     if real:
                         return {"parse": 0, "playUrl": "", "url": real,
                                 "header": '{"User-Agent":"%s"}' % UA}
+                    # 解析失败但直链本身可达，降级直返
+                    return {"parse": 0, "playUrl": "", "url": url,
+                            "header": '{"User-Agent":"%s"}' % UA}
+                # 非 lyyytv 直链：直接返回
                 return {"parse": 0, "playUrl": "", "url": url,
                         "header": '{"User-Agent":"%s"}' % UA}
-            real = self._parse(url)
+            # 第三方页面：多 parsesId 回退解析
+            real = self._try_parses(url, PARSE_IDS_PAGE)
             if real:
                 return {"parse": 0, "playUrl": "", "url": real,
                         "header": '{"User-Agent":"%s"}' % UA}
@@ -427,34 +472,19 @@ class Spider(BaseSpider):
         except Exception:
             return ""
 
-    def _call_parse(self, api_template, target_url):
-        """调用解析接口并处理 baidu.con 加密返回"""
-        j = self._get(api_template + urllib.parse.quote(target_url, safe=""), timeout=25)
+    def _call_parse(self, api_url, target_url):
+        """调用单个解析接口并处理 baidu.con 加密返回"""
+        j = self._get(api_url + urllib.parse.quote(target_url, safe=""), timeout=20)
         url = str(j.get("url") or "")
         if url.startswith(DEC_PREFIX):
             return _decrypt_baidu(url)
         return url if url.startswith("http") else ""
 
-    def _chain(self, media_url):
-        # 先试主 parsesId，不行再回退
-        result = self._call_parse(CHAIN_API, media_url)
-        if result:
-            return result
-        result = self._call_parse(FALLBACK_CHAIN_API, media_url)
-        if result:
-            return result
-        # 都解析失败，但 lyyytv.cn 直链本身可能可直接访问，降级返回原始直链
-        host = urllib.parse.urlparse(media_url).hostname or ""
-        if YT4K_HOST.search(host) or "lyyytv.cn" in host:
-            return media_url
-        return ""
-
-    def _parse(self, page_url):
-        # 先试主 parsesId，不行再回退
-        result = self._call_parse(PARSE_API, page_url)
-        if result:
-            return result
-        result = self._call_parse(FALLBACK_PARSE_API, page_url)
-        if result:
-            return result
+    def _try_parses(self, target_url, parse_ids):
+        """按顺序尝试多个 parsesId，返回第一个成功解析的真实地址"""
+        for pid in parse_ids:
+            api_url = PARSE_BASE % pid
+            result = self._call_parse(api_url, target_url)
+            if result:
+                return result
         return ""
