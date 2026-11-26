@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
 # 影探4K：由 影探4k.js 移植到鱼壳 webhtv 站点注入使用的 Python Spider。
 # 用法：把本文件放到手机 /sdcard/py/影探4K.py，站点配置 api 填 file:///sdcard/py/影探4K.py
+# 依赖：requests + pycryptodome（可选，缺了会自动降级到 urllib + 纯 Python AES）
 import base64
 import json
 import re
 import time
 import urllib.parse
+import urllib.request
 
-import requests
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
+try:
+    import requests
+    _HAS_REQUESTS = True
+except ImportError:
+    _HAS_REQUESTS = False
+
+try:
+    from Crypto.Cipher import AES as _CryptoAES
+    from Crypto.Util.Padding import unpad as _CryptoUnpad
+    _HAS_CRYPTO = True
+except ImportError:
+    _HAS_CRYPTO = False
 
 try:
     from base.spider import Spider
@@ -17,6 +28,111 @@ except ImportError:
     import sys
     sys.path.append('..')
     from base.spider import Spider
+
+# ==================== 纯 Python AES-CBC 降级实现 ====================
+if not _HAS_CRYPTO:
+    def _gmul(a, b):
+        p = 0
+        for _ in range(8):
+            if b & 1: p ^= a
+            hi = a & 0x80
+            a = (a << 1) & 0xFF
+            if hi: a ^= 0x1B
+            b >>= 1
+        return p
+
+    def _build_sbox():
+        inv = [0] * 256
+        for i in range(1, 256):
+            r, base, e = 1, i, 254
+            while e:
+                if e & 1: r = _gmul(r, base)
+                base = _gmul(base, base)
+                e >>= 1
+            inv[i] = r
+        def rotl(x, n):
+            return ((x << n) | (x >> (8 - n))) & 0xFF
+        return [inv[i] ^ rotl(inv[i], 1) ^ rotl(inv[i], 2) ^ rotl(inv[i], 3) ^ rotl(inv[i], 4) ^ 0x63
+                for i in range(256)]
+
+    _SBOX = _build_sbox()
+    _INV_SBOX = [0] * 256
+    for _i, _v in enumerate(_SBOX):
+        _INV_SBOX[_v] = _i
+    _RCON = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D]
+
+    class _PureAES(object):
+        def __init__(self, key):
+            if len(key) not in (16, 24, 32):
+                raise ValueError("bad key")
+            self.nk = len(key) // 4
+            self.nr = self.nk + 6
+            self.rk = self._expand(key)
+
+        def _expand(self, key):
+            w = [list(key[i:i + 4]) for i in range(0, len(key), 4)]
+            for i in range(self.nk, 4 * (self.nr + 1)):
+                t = list(w[i - 1])
+                if i % self.nk == 0:
+                    t = t[1:] + t[:1]
+                    t = [_SBOX[b] for b in t]
+                    t[0] ^= _RCON[i // self.nk - 1]
+                elif self.nk > 6 and i % self.nk == 4:
+                    t = [_SBOX[b] for b in t]
+                w.append([w[i - self.nk][j] ^ t[j] for j in range(4)])
+            return w
+
+        def _add(self, s, rnd):
+            for c in range(4):
+                for r in range(4):
+                    s[r][c] ^= self.rk[rnd * 4 + c][r]
+
+        def dec(self, block):
+            s = [[block[r + 4 * c] for c in range(4)] for r in range(4)]
+            self._add(s, self.nr)
+            for rnd in range(self.nr - 1, -1, -1):
+                for r in range(1, 4):
+                    s[r] = s[r][-r:] + s[r][:-r]
+                for r in range(4):
+                    for c in range(4):
+                        s[r][c] = _INV_SBOX[s[r][c]]
+                self._add(s, rnd)
+                if rnd != 0:
+                    for c in range(4):
+                        a0, a1, a2, a3 = s[0][c], s[1][c], s[2][c], s[3][c]
+                        s[0][c] = _gmul(a0, 14) ^ _gmul(a1, 11) ^ _gmul(a2, 13) ^ _gmul(a3, 9)
+                        s[1][c] = _gmul(a0, 9) ^ _gmul(a1, 14) ^ _gmul(a2, 11) ^ _gmul(a3, 13)
+                        s[2][c] = _gmul(a0, 13) ^ _gmul(a1, 9) ^ _gmul(a2, 14) ^ _gmul(a3, 11)
+                        s[3][c] = _gmul(a0, 11) ^ _gmul(a1, 13) ^ _gmul(a2, 9) ^ _gmul(a3, 14)
+            return bytes(s[r][c] for c in range(4) for r in range(4))
+
+    def _pure_aes_cbc_dec(data, key, iv):
+        aes = _PureAES(key)
+        out, prev = bytearray(), iv
+        for i in range(0, len(data), 16):
+            blk = data[i:i + 16]
+            dec = aes.dec(blk)
+            out += bytes(dec[j] ^ prev[j] for j in range(16))
+            prev = blk
+        n = out[-1]
+        if 0 < n <= 16:
+            out = out[:-n]
+        return bytes(out)
+
+    def _aes_decrypt(key, iv, ciphertext):
+        return _pure_aes_cbc_dec(ciphertext, key, iv)
+
+else:
+    def _aes_decrypt(key, iv, ciphertext):
+        cipher = _CryptoAES.new(key, _CryptoAES.MODE_CBC, iv)
+        plain = cipher.decrypt(ciphertext)
+        try:
+            return _CryptoUnpad(plain, _CryptoAES.block_size)
+        except Exception:
+            n = plain[-1]
+            if 0 < n <= 16:
+                return plain[:-n]
+            return plain
 
 KEY = 'yingtan4k'
 HOST = 'http://cms.lyyytv.cn'
@@ -42,6 +158,8 @@ PARSE_FALLBACK_4K = (8, 7, 6)
 HEADERS = {'User-Agent': 'okhttp/4.12.0'}
 # 解析请求/回源头：对齐 JS 的 PH，避免 gzip 花屏
 PARSE_HEADERS = {'User-Agent': 'okhttp/4.12.0', 'Accept-Encoding': 'identity'}
+# header 必须是 JSON 字符串（TVBox/鱼壳 Spider 框架约定）
+PARSE_HEADERS_JSON = json.dumps(PARSE_HEADERS, ensure_ascii=False)
 
 # baidu.con 前缀加密常量（对齐 yt4k.js）
 DEC_PREFIX = 'https://baidu.con/'
@@ -98,11 +216,20 @@ def object_of(value):
 
 def get_json(url, headers=None, timeout=15):
     headers = HEADERS if headers is None else headers
-    rsp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
-    try:
-        data = object_of(rsp.json())
-    except Exception:
-        data = {}
+    if _HAS_REQUESTS:
+        rsp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
+        try:
+            data = object_of(rsp.json())
+        except Exception:
+            data = {}
+    else:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            rsp = urllib.request.urlopen(req, timeout=timeout)
+            body = rsp.read().decode('utf-8', 'ignore')
+            data = object_of(body)
+        except Exception:
+            data = {}
     if not data:
         raise Exception('影探4K：接口未返回有效 JSON')
     return data
@@ -146,8 +273,7 @@ def decrypt_lvdou(value):
             return original
         key = CMS_KEY[:16].encode('utf-8')
         iv = CMS_KEY[16:32].encode('utf-8') if len(CMS_KEY) >= 32 else key
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plain = unpad(cipher.decrypt(encrypted), AES.block_size)
+        plain = _aes_decrypt(key, iv, encrypted)
         result = plain.decode('utf-8', errors='replace').strip()
         if result.startswith('http'):
             return result
@@ -193,12 +319,8 @@ def decrypt_ldmax(value, depth=0):
         encrypted = decode_base64(path[16:])
         if not encrypted or len(encrypted) % 16:
             return ''
-        cipher = AES.new(key, AES.MODE_CBC, key)
-        plain = bytearray(cipher.decrypt(encrypted))
-        pad = plain[-1]
-        if 0 < pad <= 16:
-            del plain[-pad:]
-        result = bytes(plain).decode('utf-8', errors='replace').strip()
+        plain = _aes_decrypt(key, key, encrypted)
+        result = plain.decode('utf-8', errors='replace').strip()
         return decrypt_ldmax(result, depth + 1) if is_ldmax_url(result) else result
     except Exception:
         return ''
@@ -245,8 +367,7 @@ def resolve_parse(body):
         # 优先按 base64 密文解密
         try:
             encrypted = base64.b64decode(cipher_b64, validate=False)
-            cipher = AES.new(key, AES.MODE_CBC, key)
-            plain = unpad(cipher.decrypt(encrypted), AES.block_size)
+            plain = _aes_decrypt(key, key, encrypted)
             result = plain.decode('utf-8', errors='replace').strip()
             if result.startswith('http'):
                 return result
@@ -256,8 +377,7 @@ def resolve_parse(body):
         try:
             raw = cipher_b64.encode('latin-1', errors='ignore')
             if raw and len(raw) % 16 == 0:
-                cipher = AES.new(key, AES.MODE_CBC, key)
-                plain = unpad(cipher.decrypt(raw), AES.block_size)
+                plain = _aes_decrypt(key, key, raw)
                 result = plain.decode('utf-8', errors='replace').strip()
                 if result.startswith('http'):
                     return result
@@ -269,7 +389,7 @@ def resolve_parse(body):
 
 
 def parse_url(raw, parse_id=PARSE_ID_WEB):
-    """把原始地址拼到解析基址后请求，解出真实 URL；parse_id 选解析器（5 网页 / 6 4K 直链）。"""
+    """把原始地址拼到解析基址后请求，解出真实 URL；parse_id 选解析器。"""
     if not raw:
         return ''
     target = '%s%s&parsesId=%d' % (PARSE_API, urllib.parse.quote(raw, safe="!'()*"), parse_id)
@@ -277,9 +397,17 @@ def parse_url(raw, parse_id=PARSE_ID_WEB):
         if rnd > 0:
             time.sleep(rnd * PARSE_BACKOFF)
         try:
-            rsp = requests.get(target, headers=PARSE_HEADERS, timeout=30)
-            if rsp.status_code == 200 and rsp.text:
-                resolved = resolve_parse(rsp.text)
+            if _HAS_REQUESTS:
+                rsp = requests.get(target, headers=PARSE_HEADERS, timeout=30)
+                status = rsp.status_code
+                body = rsp.text
+            else:
+                req = urllib.request.Request(target, headers=PARSE_HEADERS)
+                rsp = urllib.request.urlopen(req, timeout=30)
+                status = getattr(rsp, 'status', 200)
+                body = rsp.read().decode('utf-8', 'ignore')
+            if status == 200 and body:
+                resolved = resolve_parse(body)
                 if resolved and resolved.startswith('http'):
                     return resolved
         except Exception:
@@ -474,7 +602,7 @@ def play(play_id):
     """
     original = decrypt_lvdou(play_id)
     if not original:
-        return {'parse': 0, 'url': '', 'header': dict(PARSE_HEADERS)}
+        return {'parse': 0, 'url': '', 'header': PARSE_HEADERS_JSON}
 
     # 兼容老加密：ldmax 前缀先本地解密
     if is_ldmax_url(original):
@@ -486,7 +614,7 @@ def play(play_id):
     now = time.time()
     cached = _play_cache.get(original)
     if cached and cached[0] > now:
-        return {'parse': 0, 'url': cached[1], 'header': dict(PARSE_HEADERS)}
+        return {'parse': 0, 'url': cached[1], 'header': PARSE_HEADERS_JSON}
 
     if is_4k_source(original):
         # 4K 换链: pid8 → 6 → 7 级联; 全败退回原直链(网络内源站还活着的场景)
@@ -512,7 +640,7 @@ def play(play_id):
     if resolved:
         _play_cache[original] = (now + PLAY_CACHE_TTL, resolved)
 
-    return {'parse': 0, 'url': resolved or '', 'header': dict(PARSE_HEADERS)}
+    return {'parse': 0, 'url': resolved or '', 'header': PARSE_HEADERS_JSON}
 
 
 class Spider(Spider):
